@@ -7,7 +7,8 @@ const bcrypt = require('bcrypt'); // 단방향 암호화를 위한 bcrypt 모듈
 const { addUser } = require("../models/auth/addUser");
 const { findUser } = require("../models/auth/findUser");
 
-const ErrorHandling = require("../errors/customError");
+const ErrorHandling = require("../errors/clientError");
+const ServerErrorHandling = require("../errors/serverError");
 
 
 /**
@@ -24,12 +25,12 @@ exports.registerController = (req, res) => {
   /* 유저 추가하는 sql 쿼리 작업 */
   try {
     addUser(registerInfo, (result, err) => {
-      if (err) throw new ErrorHandling("db에 오류가 있습니다.");
+      if (err) throw new ServerErrorHandling("db에 오류가 있습니다.");
     });  
     res.send();
   } catch(err) {
     console.error(err);
-    res.status(406).json({message: err.message});
+    res.status(err.stauts).json({message: err.message});
   }
 }
 
@@ -46,17 +47,15 @@ exports.loginController = (req, res) => {
   /* 존재하는 유저인지 확인하는 sql 쿼리 작업 */
   findUser(loginInfo, (result, err) => {
     try {
-      if (err) throw new ErrorHandling("db에 오류가 있습니다.");
-
+      if (err) throw new ServerErrorHandling("db에 오류가 있습니다.");
       if (!result.length) throw new ErrorHandling("존재하지 않는 유저입니다."); // 아이디가 없을 경우
-
       const same = bcrypt.compareSync(userPW, result[0].pw); // 패스워드 비교값
       if (!same) throw new ErrorHandling("패스워드가 일치하지 않습니다.");
 
       req.session.authenticator = 'true'; // 인증된 사용자 여부 저장
       // req.session.nickname = rows[0].nickname; // 세션에 닉네임 저장
       // req.session.userID = rows[0].id; // 세션에 아이디 저장
-      req.session.cookie.maxAge = 3000 * 60 * 60; // 세션 만료 시간을 1시간으로 설정 (단위: ms, 1000은 1초)
+      req.session.cookie.maxAge = 1000 * 60 * 60; // 세션 만료 시간을 1시간으로 설정 (단위: ms, 1000은 1초)
 
       req.session.save(() => { // 세션이 저장되면
         res.send();
@@ -65,7 +64,7 @@ exports.loginController = (req, res) => {
 
     } catch (err) {
       console.error(err);
-      res.status(406).json({message: err.message});
+      res.status(err.status).json({message: err.message});
     }
   });  
 }

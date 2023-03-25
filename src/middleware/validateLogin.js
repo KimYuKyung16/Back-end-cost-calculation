@@ -1,4 +1,5 @@
-const ErrorHandling = require("../errors/customError");
+let ErrorHandling = require("../errors/clientError");
+
 
 exports.validateLogin = (req, res, next) => {
   const userID = req.body.userID;
@@ -21,6 +22,6 @@ exports.validateLogin = (req, res, next) => {
 
   } catch(err) {
     console.error(err);
-    res.status(406).json({message: err.message});
+    res.status(err.status).json({message: err.message});
   }
 }

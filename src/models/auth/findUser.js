@@ -16,6 +16,7 @@ exports.findUser = async (loginInfo, res) => {
   } catch (err) {
     connection.rollback();
     console.error(err);
+    res(null, err);
   } finally {
     connection.release();
   }

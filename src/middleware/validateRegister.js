@@ -1,4 +1,4 @@
-const ErrorHandling = require("../errors/customError");
+const ErrorHandling = require("../errors/clientError");
 
 exports.validateRegister = (req, res, next) => {
   const nickname = req.body.nickname;
@@ -34,6 +34,6 @@ exports.validateRegister = (req, res, next) => {
 
   } catch(err) {
     console.error(err);
-    res.status(406).json({message: err.message});
+    res.status(err.status).json({message: err.message});
   }
 }
