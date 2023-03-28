@@ -4,14 +4,14 @@ const db = require('../../../config/db');
 const pool = mysql.createPool(db);
 
 /**
- * 유저 등록 작업
+ * 전체 유저 리스트 가져오는 작업
  */
-exports.addUser = async (registerInfo, res) => {
+exports.addFriend = async (additionInfo, res) => {
   let connection = await pool.getConnection(async (conn) => conn);
   try {
     await connection.beginTransaction();
-    const sql = "INSERT INTO users (nickname, id, pw) VALUES (?, ?, ?)";
-    let [result] = await connection.query(sql, registerInfo);
+    const sql = 'INSERT INTO friendwaitinglist (sender, receiver, state) VALUES (?, ?, ?)'; 
+    let [result] = await connection.query(sql, additionInfo);
     res(result, null);
   } catch (err) {
     connection.rollback();

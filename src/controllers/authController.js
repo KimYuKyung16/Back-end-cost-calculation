@@ -48,18 +48,17 @@ exports.loginController = (req, res) => {
   findUser(loginInfo, (result, err) => {
     try {
       if (err) throw new ServerErrorHandling("db에 오류가 있습니다.");
-      if (!result.length) throw new ErrorHandling("존재하지 않는 유저입니다."); // 아이디가 없을 경우
+      if (!result.length) throw new ServerErrorHandling("존재하지 않는 유저입니다."); // 아이디가 없을 경우
       const same = bcrypt.compareSync(userPW, result[0].pw); // 패스워드 비교값
       if (!same) throw new ErrorHandling("패스워드가 일치하지 않습니다.");
 
       req.session.authenticator = 'true'; // 인증된 사용자 여부 저장
       // req.session.nickname = rows[0].nickname; // 세션에 닉네임 저장
-      // req.session.userID = rows[0].id; // 세션에 아이디 저장
+      req.session.userID = result[0].id; // 세션에 아이디 저장
       req.session.cookie.maxAge = 1000 * 60 * 60; // 세션 만료 시간을 1시간으로 설정 (단위: ms, 1000은 1초)
 
       req.session.save(() => { // 세션이 저장되면
-        res.send();
-        // res.send({'login_status': 'success', 'nickname': rows[0].nickname, 'profile': rows[0].profile});
+        res.send({ nickname: result[0].nickname, profile: result[0].profile });
       });
 
     } catch (err) {
@@ -67,4 +66,17 @@ exports.loginController = (req, res) => {
       res.status(err.status).json({message: err.message});
     }
   });  
+}
+
+
+/**
+ * 로그인 여부 컨트롤러
+ */
+exports.authenticationController = (req, res) => {
+  try { // 세션이 있다면 인증O, 로그인 상태O
+    if (!req.session.authenticator) throw new ServerErrorHandling("로그인이 되어있지 않습니다.");
+    res.send();
+  } catch (err) {
+    res.status(err.status).json({message: err.message});
+  }
 }

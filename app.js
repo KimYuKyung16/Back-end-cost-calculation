@@ -3,6 +3,8 @@ const app = express();
 const cors = require('cors');
 const port = 6001;
 
+const bcrypt = require('bcrypt');
+
 const { parseCookies } = require('./cookieparse.js'); // 쿠키 파싱
 
 const mysql = require('mysql'); // mysql 모듈
@@ -84,14 +86,28 @@ app.use(express.json()); // post나 get 등으로 요청을 받아들일 때 파
 /* 라우터 설정 */
 
 // 로그인 관련 라우터들
-const login = require("./src/routes/auth.js"); // 로그인 메뉴
 // const logout = require("./routes/auth"); // 로그아웃 메뉴
-const register = require("./src/routes/auth.js"); // 회원가입 메뉴
+
+
+
+
+// const login = require("./src/routes/auth.js"); // 로그인 메뉴
+// const register = require("./src/routes/auth.js"); // 회원가입 메뉴
+// const getUserList = require("./src/routes/friend"); // 회원가입 메뉴
+// app.use('/auth', login);
+// app.use('/auth', register);
+// app.use('/friend', getUserList)
+const routes = require('./src/routes');
+
+app.use('/', routes);
+
+
+
 
 // app.use('/board', board);
-app.use('/auth', login);
+
 // app.use('/logout', logout);
-app.use('/auth', register);
+
 // app.use('/user_info', user_info);
 // app.use('/write', write);
 // app.use('/plant_info', plant_info);
@@ -191,13 +207,15 @@ app.use('/auth', register);
 
 
 /* 2. 로그인된 회원이 맞는지 확인 */
-app.get('/authentication', function(req, res){ 
-  if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
-    res.send({'authenticator': true, 'nickname': req.session.nickname, 'user_id':req.session.user_id});
-  } else {
-    res.send({'authenticator': false});
-  }
-})
+// app.get('/authentication', function(req, res){ 
+//   console.log(req);
+//   console.log(req.session)
+//   if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
+//     res.send({'authenticator': true, 'nickname': req.session.nickname, 'user_id':req.session.user_id});
+//   } else {
+//     res.send({'authenticator': false});
+//   }
+// })
 
 app.get('/userInfo', function(req, res){ // 메인 화면에서 로그인된 사람 정보 출력
   if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
@@ -210,44 +228,42 @@ app.get('/userInfo', function(req, res){ // 메인 화면에서 로그인된 사
 })
 
 
-app.get('/userList', function(req, res){ // 메인 화면에서 로그인된 사람 정보 출력
-  let search = `${req.query.searchVal}%`; // 검색 단어
-  let userID = req.session.userID; // 현재 로그인된 아이디
-  console.log(search)
-  if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
+// app.get('/userList', function(req, res){ // 메인 화면에서 로그인된 사람 정보 출력
+//   let search = `${req.query.searchVal}%`; // 검색 단어
+//   let userID = req.session.userID; // 현재 로그인된 아이디
 
-    if (req.query.searchVal === '') {
-      res.send([]);
-    } else {
-      // let sql = 'SELECT * FROM users WHERE id NOT IN (?) AND id LIKE ?'; 
-      let sql = `SELECT * FROM users AS u
-      LEFT JOIN friendlist AS f ON u.id = f.friendID AND f.userID = ?
-      LEFT JOIN friendwaitinglist AS w ON u.id = w.receiver OR u.id = w.sender
-      WHERE u.id NOT IN (?) AND u.id LIKE ?`;
-      let insertValArr = [userID, userID, search];
-      connection.query(sql, insertValArr, function(error, rows){
-        if (error) throw error;
-        res.send(rows);
-      })
-    }
+//   if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
+//     if (req.query.searchVal === '') res.send([]);
+//     else {
+//       let sql = `SELECT * FROM users AS u
+//       LEFT JOIN friendlist AS f ON u.id = f.friendID AND f.userID = ?
+//       LEFT JOIN friendwaitinglist AS w ON (u.id = w.receiver AND w.sender = ?) OR (u.id = w.sender AND w.receiver = ?)
+//       WHERE u.id NOT IN (?) AND u.id LIKE ?`;
+//       let insertValArr = [userID, userID, userID, userID, search];
+//       connection.query(sql, insertValArr, function(error, rows){
+//         if (error) throw error;
+//         console.log(rows)
+//         res.send(rows);
+//       })
+//     }
 
-  }
-})
+//   }
+// })
 
 
-app.post('/userList/addFriend', function(req, res){ // 메인 화면에서 로그인된 사람 정보 출력
-  if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
-    let receiver = req.body.receiver;
-    let sender = req.session.userID;
+// app.post('/userList/addFriend', function(req, res){ // 메인 화면에서 로그인된 사람 정보 출력
+//   if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
+//     let receiver = req.body.receiver;
+//     let sender = req.session.userID;
 
-    let sql = 'INSERT INTO friendwaitinglist (sender, receiver, state) VALUES (?, ?, ?)'; 
-    let insertValArr = [sender, receiver, 'wating'];
-    connection.query(sql, insertValArr, function(error, rows){
-      if (error) throw error;
-      res.send(rows);
-    })
-  }
-})
+//     let sql = 'INSERT INTO friendwaitinglist (sender, receiver, state) VALUES (?, ?, ?)'; 
+//     let insertValArr = [sender, receiver, 'wating'];
+//     connection.query(sql, insertValArr, function(error, rows){
+//       if (error) throw error;
+//       res.send(rows);
+//     })
+//   }
+// })
 
 app.get('/waitingList', function(req, res){ // 대기 리스트 출력
   console.log(req.session.authenticator)
@@ -263,17 +279,17 @@ app.get('/waitingList', function(req, res){ // 대기 리스트 출력
   }
 })
 
-app.get('/receivingList', function(req, res){ // 친구 신청 온 거 리스트 출력
-  if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
-    let sql = `SELECT * FROM friendwaitinglist AS W
-    INNER JOIN users AS U
-    ON U.id = W.sender WHERE receiver = ?`
-    connection.query(sql, req.session.userID, function(error, rows){
-      if (error) throw error;
-      res.send(rows);
-    })
-  }
-})
+// app.get('/receivingList', function(req, res){ // 친구 신청 온 거 리스트 출력
+//   if (req.session.authenticator) { // 세션이 있다면 인증O, 로그인 상태O
+//     let sql = `SELECT * FROM friendwaitinglist AS W
+//     INNER JOIN users AS U
+//     ON U.id = W.sender WHERE receiver = ?`
+//     connection.query(sql, req.session.userID, function(error, rows){
+//       if (error) throw error;
+//       res.send(rows);
+//     })
+//   }
+// })
 
 app.get('/friendList', function(req, res){ // 친구 리스트 출력
   console.log(req.session.authenticator)
@@ -336,54 +352,28 @@ app.get('/searchFriendList', function(req, res){ // 친구 리스트 출력 (검
   }
 })
 
-app.post('/receivingList/accept', function(req, res){ // 친구 신청 수락 버튼을 눌렀을 때
-  let sender = req.body.list.sender;
-  let receiver = req.body.list.receiver;
-  // console.log(req.body.list)
 
-  let userList = [sender, receiver];
-  let sql = 'SELECT friend FROM users WHERE id IN ( ? )';
-  let insertValArr = [userList];
-  connection.query(sql, insertValArr, function(error, rows){
-    if (error) throw error;
+// app.post('/friend/receivingList/accept', function(req, res){ // 친구 신청 수락 버튼을 눌렀을 때
+//   let sender = req.body.sender;
+//   let receiver = req.body.receiver;
 
-    let friendList = []; 
+//   // let valueList = [[sender, receiver], [receiver, sender]];
+//   for (i=0; i<2; i++) {
+//     sql = 'INSERT INTO friendlist (userID, friendID) VALUES (?, ?)'; 
+//     connection.query(sql, valueList[i], function(error, rows){
+//       if (error) throw error;
+//     })
+//   }
 
-    // index 0은 sender의 friend 리스트
-    // index 1은 receiver의 friend 리스트
-    for (i=0; i<2; i++) { 
-      if (rows[i].friend === null) friendList[i] = []; // 값이 없으면 null로 뜸.
-      else friendList[i] = JSON.parse(rows[i].friend);
-
-      if (i === 0) friendList[i].push(receiver);
-      else friendList[i].push(sender);
-    }
-
-    let inserValList = [[sender, receiver], [receiver, sender]];
-
-    for (i=0; i<2; i++) {
-      sql = 'UPDATE users SET friend = ? WHERE id = ?';
-      insertValArr = [JSON.stringify(friendList[i]), userList[i]];
-      connection.query(sql, insertValArr, function(error, rows){
-        if (error) throw error;
-      })
-
-      sql = 'INSERT INTO friendlist (userID, friendID) VALUES (?, ?)'; 
-      connection.query(sql, inserValList[i], function(error, rows){
-        if (error) throw error;
-      })
-    }
-
-    sql = 'DELETE FROM friendwaitinglist WHERE sender = ? AND receiver = ?';
-    insertValArr = [sender, receiver];
-    connection.query(sql, insertValArr, function(error, rows){
-      if (error) throw error;
-      res.send();
-    }) 
-  })
+//   sql = 'DELETE FROM friendwaitinglist WHERE sender = ? AND receiver = ?';
+//   // insertValArr = [sender, receiver];
+//   connection.query(sql, insertValArr, function(error, rows){
+//     if (error) throw error;
+//     res.send();
+//   }) 
+// })
 
 
-})
 
 app.get('/appointment_title', (req, res) => {
   console.log('num값:', req.query.num)
@@ -440,6 +430,7 @@ app.post('/appointment', async function(req, res){ // 약속 저장
   let members = req.body.members;
   let members_idList = [];
 
+  console.log("들어옴")
 
   /* 비회원일 경우 */
   for (let i=0; i<members.length; i++) {
