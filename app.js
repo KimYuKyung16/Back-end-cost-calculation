@@ -1063,15 +1063,16 @@ const memberListMiddleWare__ID = (req, res, next) => {
       members.push(x.member)
     }
 
-    console.log('members값:', members);
-
     let insertValArr = [members, members];
     sql = `SELECT id, nickname, profile FROM users WHERE id IN ( ? ) UNION
     SELECT id, nickname, profile FROM non_users WHERE id IN ( ? )`
   
     connection.query(sql, insertValArr, function(error, rows){ 
       if (error) throw error;
-      console.log(rows);
+      members = []; // 멤버들의 아이디 리스트
+      for (x of rows) {
+        members.push(x.id)
+      }
       req.members = {membersID: members, memberList: rows};
       next();
     });
@@ -1109,7 +1110,7 @@ const memberListMiddleWare__costList = async (req, res, next) => {
   let lackCost; // 더 내야하는 비용
   let excessCost; // 받아야 하는 비용
 
-  async function test(i) {
+  const addEachMemberCost = async (i) => {
     let connection = await pool.getConnection(async(conn) => conn);
     try {
       let insertValArr = [calculate_list_num, membersID[i]];
@@ -1125,25 +1126,20 @@ const memberListMiddleWare__costList = async (req, res, next) => {
 
       memberList[i] = Object.assign(memberList[i], cost_object);
       
-      return '완료'
     } catch(err) {
       console.log(err);
     }
-  
   }
 
-  async function test2() {
+  const addMemberCost = async () => {
     let count = 0;
-    return new Promise(async (resolve) => {
-      for (const x of membersID) {
-        console.log('출력중:', await test(count));
-        count ++;
-      }
-      resolve('완료')
-    })
+    for (const x of membersID) {
+      await addEachMemberCost(count);
+      count ++;
+    }
   }
 
-  await test2();
+  await addMemberCost();
 
   /* 아래 작업을 하는 이유: 로그인한 사람의 정보가 멤버리스트 중에서 제일 위로 올라오게 하기 위해서이다. */
   if (memberList[0].id !== req.session.userID) { // 멤버리스트의 첫번째값이 본인 아이디가 아니라면
@@ -1175,69 +1171,47 @@ memberListMiddleWare__costList
 
 
 
-/* 정산 저장 */
-app.post('/cost', function(req, res){
-  if (req.session) {
-    let calculateListNum = parseInt(req.body.contents_send_val.calculateListNum);
-    let title = req.body.contents_send_val.title;
-    let id = req.body.contents_send_val.id;
-    let payer = req.body.contents_send_val.payer;
-    let cost = parseInt(req.body.contents_send_val.cost);
-    let content = req.body.contents_send_val.content;
-    let receipt = req.body.contents_send_val.receipt;
-
-    var insertValArr = [calculateListNum, title, id, payer, cost, content, receipt];
-    sql = "INSERT INTO cost_list (calculateListNum, title, id, payer, cost, content, receipt) VALUES (?, ?, ?, ?, ?, ?, ?)";
-  
-    connection.query(sql, insertValArr, function(error, rows){ // db에 글 저장
-      if (error) throw error;
-      res.send({'status' : 'success'});
-    });
-
-  } else {
-    console.log("해당 세션이 없습니다.")
-  }
-})
-
 /* 정산 리스트 출력 */
-app.get('/costlist', async function(req, res){
-  let connection = await pool.getConnection(async(conn) => conn);
-  try {
-    let num = req.query.num;
+// app.get('/costlist', async function(req, res){
+//   let connection = await pool.getConnection(async(conn) => conn);
+//   try {
+//     let num = req.query.num;
 
-    let sql = "SELECT count(*) as count FROM cost_list WHERE calculateListNum = ?";
-    let insertValArr = [num];
-    let [totalListCount] = await connection.query(sql, insertValArr);
+//     let sql = "SELECT count(*) as count FROM cost_list WHERE calculateListNum = ?";
+//     let insertValArr = [num];
+//     let [totalListCount] = await connection.query(sql, insertValArr);
 
-    let total_contents = totalListCount[0].count; // 전체 게시글 개수
-    let one_page_contents = 25; // 한 페이지당 게시글 개수
+//     let total_contents = totalListCount[0].count; // 전체 게시글 개수
+//     let one_page_contents = 25; // 한 페이지당 게시글 개수
 
-    let total_pages = parseInt(total_contents / one_page_contents); // 총 페이지 개수
-    let remain_contents = total_contents % one_page_contents; // 나머지 게시글 개수 
-    remain_contents ? total_pages += 1 : total_pages; // 나머지 게시글이 있으면 페이지 개수 추가
+//     let total_pages = parseInt(total_contents / one_page_contents); // 총 페이지 개수
+//     let remain_contents = total_contents % one_page_contents; // 나머지 게시글 개수 
+//     remain_contents ? total_pages += 1 : total_pages; // 나머지 게시글이 있으면 페이지 개수 추가
   
-    let current_page = req.query.current_page;
-    current_page === undefined ? current_page = 1 : current_page = parseInt(req.query.current_page); // 현재 페이지
-    console.log('현재 페이지:',current_page)
-    let start_value = (current_page-1) * one_page_contents; // 시작값
-    let output_num; // 출력 개수
-    console.log('시작값:', start_value)
+//     let current_page = req.query.current_page;
+//     current_page === undefined ? current_page = 1 : current_page = parseInt(req.query.current_page); // 현재 페이지
+//     console.log('현재 페이지:',current_page)
+//     let start_value = (current_page-1) * one_page_contents; // 시작값
+//     let output_num; // 출력 개수
+//     console.log('시작값:', start_value)
   
-    if (current_page == total_pages) { // 현재 페이지가 마지막 페이지라면
-      output_num = remain_contents; // 출력 개수는 나머지 게시글의 개수
-    } else { // 현재 페이지가 마지막 페이지가 아니라면 
-      output_num = one_page_contents; // 출력 개수는 한 페이지당 게시글의 개수
-    }
+//     if (current_page == total_pages) { // 현재 페이지가 마지막 페이지라면
+//       output_num = remain_contents; // 출력 개수는 나머지 게시글의 개수
+//     } else { // 현재 페이지가 마지막 페이지가 아니라면 
+//       output_num = one_page_contents; // 출력 개수는 한 페이지당 게시글의 개수
+//     }
 
-    console.log(total_pages, output_num)
-    sql = "SELECT * FROM cost_list WHERE calculateListNum = ? limit ?, ?";
-    insertValArr = [num, start_value, output_num];
-    let [costListData] = await connection.query(sql, insertValArr);
-    res.send({list: costListData, totalPageCount: total_pages});
-  } catch(err) {
-    console.log(err);
-  }
-})
+//     console.log(total_pages, output_num)
+//     sql = "SELECT * FROM cost_list WHERE calculateListNum = ? limit ?, ?";
+//     insertValArr = [num, start_value, output_num];
+//     let [costListData] = await connection.query(sql, insertValArr);
+//     res.send({list: costListData, totalPageCount: total_pages});
+//   } catch(err) {
+//     console.log(err);
+//   }
+// })
+
+
 
 /* 비용 총 합계, 1인당 내야 할 비용 */
 // app.get('/sum', function(req, res){
@@ -1266,25 +1240,8 @@ app.get('/costlist', async function(req, res){
 
 
 
-
-
-
-
-
-
-
 // 리액트에서 이미지 적용하기 위해서 필요
 app.use('/profile',express.static(__dirname + '/profile'));
-
-
-
-
-
-
-
-
-
-
 
 
 app.listen(port, () => {
@@ -1292,14 +1249,3 @@ app.listen(port, () => {
 })
 
 
-
-
-
-
-
-//////////// 테스트요!!!!!!!!!!!!!!!!!!!
-app.get('/hello', async function(req, res){
-  // console.log(req.body);
-  console.log(req.query)
-
-})
