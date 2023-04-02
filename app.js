@@ -592,7 +592,7 @@ const appointmentListMiddleWare__type1 = async (req, res, next) => {
       let total_pages = parseInt(total_contents / one_page_contents); // 총 페이지 개수
       let remain_contents = total_contents % one_page_contents; // 나머지 게시글 개수 
       remain_contents ? total_pages += 1 : total_pages; // 나머지 게시글이 있으면 페이지 개수 추가
-    
+
       let current_page = req.query.current_page; 
       current_page === undefined ? current_page = 1 : current_page = parseInt(req.query.current_page); // 현재 페이지
       console.log('현재 페이지:',current_page)
@@ -622,9 +622,12 @@ const appointmentListMiddleWare__type1 = async (req, res, next) => {
         UNION 
         SELECT id, nickname, profile FROM non_users AS N
         JOIN calculate_list_members AS M
-        ON N.id = M.member WHERE M.calculate_list_num = ?`;
+        ON N.id = M.member WHERE M.calculate_list_num = ?
+        LIMIT 0,4`; // 0번째부터 4개 추출하기
         let [membersList] = await connection.query(sql, insertValArr);
         connection.release();
+
+        console.log('memberList값:', membersList)
 
         calculateListData[i].members = membersList;
   
@@ -648,6 +651,7 @@ const appointmentListMiddleWare__type1 = async (req, res, next) => {
         req.count1 = {count: totalListCount[0].count};
         next();
       } else {
+        console.log('total_pages', total_pages)
         res.send({list: calculateListData,totalPageCount: total_pages});
       }
 
@@ -709,7 +713,8 @@ const appointmentListMiddleWare__type2 = async (req, res, next) => {
         UNION 
         SELECT id, nickname, profile FROM non_users AS N
         JOIN calculate_list_members AS M
-        ON N.id = M.member WHERE M.calculate_list_num = ?`;
+        ON N.id = M.member WHERE M.calculate_list_num = ?
+        LIMIT 0,4`;
 
         let [membersList] = await connection.query(sql, insertValArr);
         connection.release();
@@ -797,7 +802,8 @@ const appointmentListMiddleWare__type3 = async (req, res, next) => {
         UNION 
         SELECT id, nickname, profile FROM non_users AS N
         JOIN calculate_list_members AS M
-        ON N.id = M.member WHERE M.calculate_list_num = ?`;
+        ON N.id = M.member WHERE M.calculate_list_num = ?
+        LIMIT 0,4`;
 
         let [membersList] = await connection.query(sql, insertValArr);
         connection.release();
@@ -933,7 +939,8 @@ const appointmentListMiddleWare__type4 = async (req, res, next) => {
         UNION 
         SELECT id, nickname, profile FROM non_users AS N
         JOIN calculate_list_members AS M
-        ON N.id = M.member WHERE M.calculate_list_num = ?`;
+        ON N.id = M.member WHERE M.calculate_list_num = ?
+        LIMIT 0,4`;
 
         let [membersList] = await connection.query(sql, insertValArr);
         connection.release();
@@ -1050,124 +1057,124 @@ app.post('/userinfo/profile', upload.single('uploadImage'), function(req, res){
 //   });
 // }
 
-// 멤버들의 아이디 목록을 가져오는 미들웨어
-const memberListMiddleWare__ID = (req, res, next) => {
-  let calculate_list_num = req.query.num;
+// // 멤버들의 아이디 목록을 가져오는 미들웨어
+// const memberListMiddleWare__ID = (req, res, next) => {
+//   let calculate_list_num = req.query.num;
 
-  let sql = 'SELECT member FROM calculate_list_members WHERE calculate_list_num = ?';
-  connection.query(sql, calculate_list_num, function(error, rows){
-    if (error) throw error;
-    // let members = JSON.parse(rows[0].members); // 멤버들의 아이디 리스트
-    let members = []; // 멤버들의 아이디 리스트
-    for(x of rows) {
-      members.push(x.member)
-    }
+//   let sql = 'SELECT member FROM calculate_list_members WHERE calculate_list_num = ?';
+//   connection.query(sql, calculate_list_num, function(error, rows){
+//     if (error) throw error;
+//     // let members = JSON.parse(rows[0].members); // 멤버들의 아이디 리스트
+//     let members = []; // 멤버들의 아이디 리스트
+//     for(x of rows) {
+//       members.push(x.member)
+//     }
 
-    let insertValArr = [members, members];
-    sql = `SELECT id, nickname, profile FROM users WHERE id IN ( ? ) UNION
-    SELECT id, nickname, profile FROM non_users WHERE id IN ( ? )`
+//     let insertValArr = [members, members];
+//     sql = `SELECT id, nickname, profile FROM users WHERE id IN ( ? ) UNION
+//     SELECT id, nickname, profile FROM non_users WHERE id IN ( ? )`
   
-    connection.query(sql, insertValArr, function(error, rows){ 
-      if (error) throw error;
-      members = []; // 멤버들의 아이디 리스트
-      for (x of rows) {
-        members.push(x.id)
-      }
-      req.members = {membersID: members, memberList: rows};
-      next();
-    });
-  });
-}
+//     connection.query(sql, insertValArr, function(error, rows){ 
+//       if (error) throw error;
+//       members = []; // 멤버들의 아이디 리스트
+//       for (x of rows) {
+//         members.push(x.id)
+//       }
+//       req.members = {membersID: members, memberList: rows};
+//       next();
+//     });
+//   });
+// }
 
-// 비용 총 합계, 1인당 내야 할 비용을 구하는 미들웨어
-const memberListMiddleWare__totalCost = (req, res, next) => {
-  let calculate_list_num = req.query.num;
-  let memberLen = req.members.membersID.length; // 멤버들의 수
+// // 비용 총 합계, 1인당 내야 할 비용을 구하는 미들웨어
+// const memberListMiddleWare__totalCost = (req, res, next) => {
+//   let calculate_list_num = req.query.num;
+//   let memberLen = req.members.membersID.length; // 멤버들의 수
 
-  let sql = "SELECT sum(cost) as sum FROM cost_list WHERE calculateListNum = ?";
+//   let sql = "SELECT sum(cost) as sum FROM cost_list WHERE calculateListNum = ?";
   
-  connection.query(sql, calculate_list_num, function(error, rows){ // db에 글 저장
-    if (error) throw error;
-    let totalCostSum = rows[0].sum;
-    // let eachCost = (totalCostSum / rows.length).toFixed(2); // 소수점 둘째자리부터 반올림
-    let eachCost = Math.ceil(totalCostSum / memberLen) // 올림
+//   connection.query(sql, calculate_list_num, function(error, rows){ // db에 글 저장
+//     if (error) throw error;
+//     let totalCostSum = rows[0].sum;
+//     // let eachCost = (totalCostSum / rows.length).toFixed(2); // 소수점 둘째자리부터 반올림
+//     let eachCost = Math.ceil(totalCostSum / memberLen) // 올림
 
-    totalCostSum === null? totalCostSum = 0 : totalCostSum = totalCostSum; 
+//     totalCostSum === null? totalCostSum = 0 : totalCostSum = totalCostSum; 
 
-    req.cost = {sumCost: totalCostSum, eachCost: eachCost};
-    next();
-  });
-}
+//     req.cost = {sumCost: totalCostSum, eachCost: eachCost};
+//     next();
+//   });
+// }
 
-// 각 멤버들의 비용 목록을 추가하는 미들웨어
-const memberListMiddleWare__costList = async (req, res, next) => {
-  let calculate_list_num = req.query.num;
-  let membersID = req.members.membersID; // 멤버들의 아이디 리스트
-  let memberList = req.members.memberList; // 멤버들의 정보 리스트
-  let eachCost = req.cost.eachCost; // 1인당 내야 하는 비용
+// // 각 멤버들의 비용 목록을 추가하는 미들웨어
+// const memberListMiddleWare__costList = async (req, res, next) => {
+//   let calculate_list_num = req.query.num;
+//   let membersID = req.members.membersID; // 멤버들의 아이디 리스트
+//   let memberList = req.members.memberList; // 멤버들의 정보 리스트
+//   let eachCost = req.cost.eachCost; // 1인당 내야 하는 비용
 
-  let totalCost; // 총 지출비
-  let lackCost; // 더 내야하는 비용
-  let excessCost; // 받아야 하는 비용
+//   let totalCost; // 총 지출비
+//   let lackCost; // 더 내야하는 비용
+//   let excessCost; // 받아야 하는 비용
 
-  const addEachMemberCost = async (i) => {
-    let connection = await pool.getConnection(async(conn) => conn);
-    try {
-      let insertValArr = [calculate_list_num, membersID[i]];
-      let sql = 'SELECT sum(cost) as sum FROM cost_list WHERE calculateListNum = ? and id = ?';
+//   const addEachMemberCost = async (i) => {
+//     let connection = await pool.getConnection(async(conn) => conn);
+//     try {
+//       let insertValArr = [calculate_list_num, membersID[i]];
+//       let sql = 'SELECT sum(cost) as sum FROM cost_list WHERE calculateListNum = ? and id = ?';
   
-      let [rows] = await connection.query(sql, insertValArr);
-      connection.release();
+//       let [rows] = await connection.query(sql, insertValArr);
+//       connection.release();
 
-      totalCost = Number(rows[0].sum); // 총 지출비
-      lackCost = totalCost - eachCost <= 0 ? eachCost - totalCost : 0; // 더 내야하는 비용
-      excessCost = totalCost - eachCost >= 0 ? totalCost - eachCost : 0; // 받아야 하는 비용
-      let cost_object = {totalCost: totalCost, lackCost: lackCost, excessCost: excessCost};
+//       totalCost = Number(rows[0].sum); // 총 지출비
+//       lackCost = totalCost - eachCost <= 0 ? eachCost - totalCost : 0; // 더 내야하는 비용
+//       excessCost = totalCost - eachCost >= 0 ? totalCost - eachCost : 0; // 받아야 하는 비용
+//       let cost_object = {totalCost: totalCost, lackCost: lackCost, excessCost: excessCost};
 
-      memberList[i] = Object.assign(memberList[i], cost_object);
+//       memberList[i] = Object.assign(memberList[i], cost_object);
       
-    } catch(err) {
-      console.log(err);
-    }
-  }
+//     } catch(err) {
+//       console.log(err);
+//     }
+//   }
 
-  const addMemberCost = async () => {
-    let count = 0;
-    for (const x of membersID) {
-      await addEachMemberCost(count);
-      count ++;
-    }
-  }
+//   const addMemberCost = async () => {
+//     let count = 0;
+//     for (const x of membersID) {
+//       await addEachMemberCost(count);
+//       count ++;
+//     }
+//   }
 
-  await addMemberCost();
+//   await addMemberCost();
 
-  /* 아래 작업을 하는 이유: 로그인한 사람의 정보가 멤버리스트 중에서 제일 위로 올라오게 하기 위해서이다. */
-  if (memberList[0].id !== req.session.userID) { // 멤버리스트의 첫번째값이 본인 아이디가 아니라면
-    let ownArray = memberList.filter((x) => x.id === req.session.userID); // 내 유저 정보 객체값
-    let index = memberList.findIndex(x => x.id === req.session.userID); // 내 유저 정보 객체값이 들어있는 인덱스
-    let opponentArray = memberList[0]; // 바꿀 상대방의 유저 정보 객체값
+//   /* 아래 작업을 하는 이유: 로그인한 사람의 정보가 멤버리스트 중에서 제일 위로 올라오게 하기 위해서이다. */
+//   if (memberList[0].id !== req.session.userID) { // 멤버리스트의 첫번째값이 본인 아이디가 아니라면
+//     let ownArray = memberList.filter((x) => x.id === req.session.userID); // 내 유저 정보 객체값
+//     let index = memberList.findIndex(x => x.id === req.session.userID); // 내 유저 정보 객체값이 들어있는 인덱스
+//     let opponentArray = memberList[0]; // 바꿀 상대방의 유저 정보 객체값
 
-    memberList[0] = ownArray[0]; // 첫 번째 인덱스에는 내 정보 넣기
-    memberList[index] = opponentArray; // 내 정보와 바꾸기 위해 원래의 내 인덱스에는 상대방 정보 넣기
-  }
-
-
-  res.send({
-    sumCost: req.cost.sumCost,
-    eachCost: req.cost.eachCost,
-    memberList: memberList
-  });
-
-}
+//     memberList[0] = ownArray[0]; // 첫 번째 인덱스에는 내 정보 넣기
+//     memberList[index] = opponentArray; // 내 정보와 바꾸기 위해 원래의 내 인덱스에는 상대방 정보 넣기
+//   }
 
 
+//   res.send({
+//     sumCost: req.cost.sumCost,
+//     eachCost: req.cost.eachCost,
+//     memberList: memberList
+//   });
 
-/* 회원, 비회원 멤버 리스트 + 개인 별 비용 목록 */
-app.get('/memberList', 
-memberListMiddleWare__ID,
-memberListMiddleWare__totalCost,
-memberListMiddleWare__costList
-)
+// }
+
+
+
+// /* 회원, 비회원 멤버 리스트 + 개인 별 비용 목록 */
+// app.get('/memberList', 
+// memberListMiddleWare__ID,
+// memberListMiddleWare__totalCost,
+// memberListMiddleWare__costList
+// )
 
 
 
