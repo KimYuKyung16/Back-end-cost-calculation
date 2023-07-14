@@ -23,7 +23,7 @@ app.use(
     store: sessionStore,
     resave: false, //세션에 변경사항이 없어도 항상 저장할 지 설정하는 값
     saveUninitialized: false,
-    cookie: { maxAge: 600000},
+    cookie: { maxAge: 60000},
     // rolling: false // 로그인 상태에서 다른 페이지로 이동 할 때마다 세션값에 변화(maxAge 시간 변경 등)를 줄 것인지 여부
   })
 );

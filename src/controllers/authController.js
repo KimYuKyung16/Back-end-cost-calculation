@@ -11,6 +11,18 @@ const ErrorHandling = require("../errors/clientError");
 const ServerErrorHandling = require("../errors/serverError");
 
 /**
+ * 로그인 여부 컨트롤러
+ */
+exports.authenticationController = (req, res) => {
+  try { // 세션이 있다면 인증O, 로그인 상태O
+    if (!req.session.authenticator) throw new ServerErrorHandling("로그인이 되어있지 않습니다.");
+    res.send();
+  } catch (err) {
+    res.status(err.status).json({message: err.message});
+  }
+}
+
+/**
  * 회원가입 컨트롤러
  */
 exports.registerController = (req, res) => {
@@ -52,9 +64,8 @@ exports.loginController = (req, res) => {
       if (!same) throw new ErrorHandling("패스워드가 일치하지 않습니다.");
 
       req.session.authenticator = "true"; // 인증된 사용자 여부 저장
-      // req.session.nickname = rows[0].nickname; // 세션에 닉네임 저장
       req.session.userID = result[0].id; // 세션에 아이디 저장
-      req.session.cookie.maxAge = 1000 * 60 * 60; // 세션 만료 시간을 1시간으로 설정 (단위: ms, 1000은 1초)
+      req.session.cookie.maxAge = 1000 * 60 * 60 * 3; // 세션 만료 시간을 1시간으로 설정 (단위: ms, 1000은 1초)
 
       req.session.save(() => {
         // 세션이 저장되면
@@ -70,3 +81,11 @@ exports.loginController = (req, res) => {
     }
   });
 };
+
+/**
+ * 로그아웃 컨트롤러
+ */
+exports.logoutController = (req, res) => {
+  req.session.destroy();
+  res.send();
+}
