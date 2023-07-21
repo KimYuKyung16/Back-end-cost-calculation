@@ -1,12 +1,8 @@
-const {
-  getMessageListCount,
-  getMessageList,
-} = require("../models/message/getMessageList");
-const {
-  changeMessageReadable,
-} = require("../models/message/changeMessageReadable");
 const { getUserInfo } = require("../models/user/getUserInfo");
-const { changeProfile } = require("../models/user/changeProfile");
+const {
+  changeProfile,
+  changeNickname,
+} = require("../models/user/changeProfile");
 
 const ServerErrorHandling = require("../errors/serverError");
 
@@ -17,7 +13,7 @@ exports.getUserInfoController = async (req, res) => {
   try {
     const userInfo = await getUserInfo(req.session.userID);
     if (userInfo.message) throw new ServerErrorHandling(userInfo.message);
-    res.send({profile: userInfo[0].profile, nickname: userInfo[0].nickname});
+    res.send({ profile: userInfo[0].profile, nickname: userInfo[0].nickname });
   } catch (err) {
     res.status(err.status).json({ message: err.message });
   }
@@ -28,12 +24,21 @@ exports.getUserInfoController = async (req, res) => {
  */
 exports.changeProfileController = async (req, res) => {
   try {
-    const profileFile = 'http://localhost:6001/' + req.file.path;
     const nickname = req.body.nickname;
-
-    const result = await changeProfile([profileFile, nickname, req.session.userID]);
-    if (result.message) throw new ServerErrorHandling(result.message);
-    res.send({url: profileFile});
+    if (req.file) {
+      const profileFile = "http://localhost:6001/" + req.file.path;
+      const result = await changeProfile([
+        profileFile,
+        nickname,
+        req.session.userID,
+      ]);
+      if (result.message) throw new ServerErrorHandling(result.message);
+      res.send({ url: profileFile });
+    } else {
+      const result = await changeNickname([nickname, req.session.userID]);
+      if (result.message) throw new ServerErrorHandling(result.message);
+      res.send();
+    }
   } catch (err) {
     res.status(err.status).json({ message: err.message });
   }

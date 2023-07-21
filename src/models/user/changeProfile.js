@@ -21,3 +21,22 @@ exports.changeProfile = async (values) => {
     connection.release();
   }
 };
+
+/**
+ * 닉네임만 변경하는 작업
+ */
+exports.changeNickname = async (values) => {
+  let connection = await pool.getConnection(async (conn) => conn);
+  try {
+    await connection.beginTransaction();
+    const sql = "UPDATE users SET nickname = ? WHERE id = ?"; 
+    let [result] = await connection.query(sql, values);
+    return result;
+  } catch (err) {
+    connection.rollback();
+    console.error(err);
+    return ({message: "db에 에러가 있습니다."});
+  } finally {
+    connection.release();
+  }
+};
