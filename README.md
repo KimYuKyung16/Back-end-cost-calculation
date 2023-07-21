@@ -10,7 +10,7 @@
 <br/>
 
 ## Front-end 리포지토리
-https://github.com/KimYuKyung16/cost_calculation_server
+https://github.com/KimYuKyung16/cost-calculation
 
 ## 폴더 구조
 MVC 패턴으로 구현하고자 했습니다.
